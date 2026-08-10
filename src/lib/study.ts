@@ -26,6 +26,17 @@ export function addDays(iso: string, days: number) {
 
 export const todayISO = () => toISODate(new Date());
 
+export function formatLongDate(iso: string) {
+  return new Date(iso + "T00:00:00").toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
+/** Day offset (1, 2, 3, 4, 7, 15, 39) for a 1-based revision number. */
+export const revisionOffset = (n: number) => REVISION_OFFSETS[n - 1] ?? n;
+
 export type Progress = { total: number; completed: number; inProgress: number; notStarted: number; pct: number };
 
 export function computeProgress(statuses: TopicStatus[]): Progress {
