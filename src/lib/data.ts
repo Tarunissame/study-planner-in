@@ -423,6 +423,17 @@ export function useRevisions() {
   });
 }
 
+export function useSkipRevision() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("revision_items").update({ status: "skipped" }).eq("id", id);
+      if (error) throw error;
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["revisions"] }),
+  });
+}
+
 export function useCompleteRevision() {
   const qc = useQueryClient();
   return useMutation({
