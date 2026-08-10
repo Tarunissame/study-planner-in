@@ -3,8 +3,8 @@ import { motion } from "motion/react";
 import { CheckCircle2, RefreshCw, SkipForward } from "lucide-react";
 import { EmptyState, PageHeader } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
-import { useRevisionMutations, useRevisions, useSyllabus } from "@/lib/data";
-import { REVISION_OFFSETS, formatLongDate, todayISO } from "@/lib/study";
+import { useCompleteRevision, useRevisions, useSkipRevision, useSyllabus } from "@/lib/data";
+import { REVISION_OFFSETS, formatLongDate, revisionOffset, todayISO } from "@/lib/study";
 
 export const Route = createFileRoute("/_authenticated/revision")({
   head: () => ({
@@ -22,7 +22,8 @@ function RevisionPage() {
   const today = todayISO();
   const { data: revisions = [], isLoading } = useRevisions();
   const { data: syllabus } = useSyllabus();
-  const { complete, skip } = useRevisionMutations();
+  const complete = useCompleteRevision();
+  const skip = useSkipRevision();
 
   const topicName = (id: string) => syllabus?.topics.find((t) => t.id === id)?.name ?? "Topic";
   const pending = revisions.filter((r) => r.status === "pending");
@@ -85,14 +86,14 @@ function RevisionPage() {
                         className="flex flex-wrap items-center gap-3 px-4 py-3"
                       >
                         <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/12 text-xs font-semibold text-primary">
-                          D{r.offset_days}
+                          D{revisionOffset(r.revision_number)}
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm">{topicName(r.topic_id)}</p>
                           <p className="text-xs text-muted-foreground">Due {formatLongDate(r.due_date)}</p>
                         </div>
                         <div className="flex gap-2">
-                          <Button size="sm" variant="secondary" onClick={() => complete.mutate(r.id)}>
+                          <Button size="sm" variant="secondary" onClick={() => complete.mutate({ id: r.id, done: true })}>
                             <CheckCircle2 className="size-3.5" /> Done
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => skip.mutate(r.id)}>

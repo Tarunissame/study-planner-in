@@ -6,7 +6,7 @@ import { EmptyState, PageHeader } from "@/components/app/AppShell";
 import { StatusBox } from "@/components/StatusBox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useDailyTaskMutations, useDailyTasks, useProfile } from "@/lib/data";
+import { useDailyMutations, useDailyTasks, useProfile } from "@/lib/data";
 import { addDays, formatLongDate, nextStatus, statusLabel, todayISO } from "@/lib/study";
 
 export const Route = createFileRoute("/_authenticated/daily")({
@@ -25,7 +25,7 @@ function DailyPage() {
   const [date, setDate] = useState(todayISO());
   const { data: profile } = useProfile();
   const { data: tasks = [], isLoading } = useDailyTasks(date);
-  const { add, setStatus, remove, seedDefaults } = useDailyTaskMutations(date);
+  const { addTask, setStatus, remove, seedDay } = useDailyMutations(date);
   const [label, setLabel] = useState("");
 
   const completed = tasks.filter((t) => t.status === "completed").length;
@@ -63,7 +63,8 @@ function DailyPage() {
             <span className="text-base font-normal text-muted-foreground">/{tasks.length} done</span>
           </p>
           <p className="text-xs text-muted-foreground">
-            Daily targets: {profile?.daily_lecture_target ?? 0} lectures · {profile?.daily_question_target ?? 0} questions
+            Daily targets: {profile?.default_lecture_target ?? 0} lectures ·{" "}
+            {(profile?.default_question_blocks ?? 0) * (profile?.default_questions_per_block ?? 0)} questions
           </p>
         </div>
         <div className="w-full max-w-xs">
@@ -82,7 +83,7 @@ function DailyPage() {
           title="Nothing logged for this day"
           description="Load your standard daily targets, or add tasks manually below."
           action={
-            <Button onClick={() => seedDefaults.mutate()} disabled={seedDefaults.isPending}>
+            <Button onClick={() => profile && seedDay.mutate(profile)} disabled={!profile || seedDay.isPending}>
               <CalendarDays className="size-4" /> Load daily targets
             </Button>
           }
@@ -93,14 +94,16 @@ function DailyPage() {
             <div key={t.id} className="group flex items-center gap-3 px-4 py-3">
               <StatusBox
                 status={t.status}
-                onClick={() => setStatus.mutate({ id: t.id, status: nextStatus(t.status) })}
+                onClick={() =>
+                  setStatus.mutate({ id: t.id, status: nextStatus(t.status), quantity: t.target_quantity })
+                }
                 label={`${t.label}: ${statusLabel[t.status]}`}
               />
               <div className="min-w-0 flex-1">
                 <p className={`truncate text-sm ${t.status === "completed" ? "text-muted-foreground line-through" : ""}`}>
                   {t.label}
                 </p>
-                <p className="text-xs capitalize text-muted-foreground">{t.kind.replace("_", " ")}</p>
+                <p className="text-xs capitalize text-muted-foreground">{t.task_type.replace("_", " ")}</p>
               </div>
               <Button
                 size="icon"
@@ -121,7 +124,12 @@ function DailyPage() {
         onSubmit={(e) => {
           e.preventDefault();
           if (!label.trim()) return;
-          add.mutate({ label: label.trim().slice(0, 160), kind: "custom" });
+          addTask.mutate({
+            label: label.trim().slice(0, 160),
+            task_type: "custom",
+            target_quantity: 1,
+            position: tasks.length,
+          });
           setLabel("");
         }}
       >
