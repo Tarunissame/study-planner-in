@@ -21,6 +21,7 @@ export type Database = {
           id: string
           name: string
           position: number
+          status: Database["public"]["Enums"]["topic_status"]
           subject_id: string
           user_id: string
         }
@@ -30,6 +31,7 @@ export type Database = {
           id?: string
           name: string
           position?: number
+          status?: Database["public"]["Enums"]["topic_status"]
           subject_id: string
           user_id: string
         }
@@ -39,6 +41,7 @@ export type Database = {
           id?: string
           name?: string
           position?: number
+          status?: Database["public"]["Enums"]["topic_status"]
           subject_id?: string
           user_id?: string
         }
@@ -52,14 +55,43 @@ export type Database = {
           },
         ]
       }
+      daily_notes: {
+        Row: {
+          content: string
+          created_at: string
+          date: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          date: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          date?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_tasks: {
         Row: {
+          block_index: number
           completed_quantity: number
           created_at: string
           date: string
           id: string
           label: string
           position: number
+          r360_item_id: string | null
           status: Database["public"]["Enums"]["topic_status"]
           target_quantity: number
           task_type: Database["public"]["Enums"]["task_type"]
@@ -67,12 +99,14 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          block_index?: number
           completed_quantity?: number
           created_at?: string
           date: string
           id?: string
           label: string
           position?: number
+          r360_item_id?: string | null
           status?: Database["public"]["Enums"]["topic_status"]
           target_quantity?: number
           task_type?: Database["public"]["Enums"]["task_type"]
@@ -80,12 +114,14 @@ export type Database = {
           user_id: string
         }
         Update: {
+          block_index?: number
           completed_quantity?: number
           created_at?: string
           date?: string
           id?: string
           label?: string
           position?: number
+          r360_item_id?: string | null
           status?: Database["public"]["Enums"]["topic_status"]
           target_quantity?: number
           task_type?: Database["public"]["Enums"]["task_type"]
@@ -93,6 +129,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "daily_tasks_r360_item_id_fkey"
+            columns: ["r360_item_id"]
+            isOneToOne: false
+            referencedRelation: "r360_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "daily_tasks_topic_id_fkey"
             columns: ["topic_id"]
@@ -147,6 +190,45 @@ export type Database = {
         }
         Relationships: []
       }
+      r360_items: {
+        Row: {
+          block_count: number
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          per_block: number
+          position: number
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          block_count?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          label: string
+          per_block?: number
+          position?: number
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          block_count?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          per_block?: number
+          position?: number
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       revision_items: {
         Row: {
           completed_at: string | null
@@ -181,6 +263,67 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "revision_items_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      study_logs: {
+        Row: {
+          chapter_id: string | null
+          created_at: string
+          date: string
+          id: string
+          lecture_name: string | null
+          lecture_number: number
+          subject_id: string | null
+          topic_id: string | null
+          topic_name: string
+          user_id: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          created_at?: string
+          date: string
+          id?: string
+          lecture_name?: string | null
+          lecture_number?: number
+          subject_id?: string | null
+          topic_id?: string | null
+          topic_name?: string
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          lecture_name?: string | null
+          lecture_number?: number
+          subject_id?: string | null
+          topic_id?: string | null
+          topic_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_logs_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_logs_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_logs_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
             referencedRelation: "topics"
@@ -357,6 +500,75 @@ export type Database = {
           target?: number | null
           type?: string
           unit?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tracking_cells: {
+        Row: {
+          chapter_id: string
+          created_at: string
+          id: string
+          resource_id: string
+          status: Database["public"]["Enums"]["topic_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chapter_id: string
+          created_at?: string
+          id?: string
+          resource_id: string
+          status?: Database["public"]["Enums"]["topic_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string
+          created_at?: string
+          id?: string
+          resource_id?: string
+          status?: Database["public"]["Enums"]["topic_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_cells_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_cells_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_resources: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
           user_id?: string
         }
         Relationships: []
