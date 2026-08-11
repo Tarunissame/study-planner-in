@@ -48,6 +48,8 @@ export type DailyTask = {
   status: TopicStatus;
   completed_quantity: number;
   position: number;
+  block_index: number;
+  r360_item_id: string | null;
 };
 export type RevisionItem = {
   id: string;
