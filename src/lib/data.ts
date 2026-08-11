@@ -367,6 +367,7 @@ export function useDailyMutations(date: string) {
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["daily", date] });
     qc.invalidateQueries({ queryKey: ["daily-all"] });
+    qc.invalidateQueries({ queryKey: ["daily-range"] });
   };
 
   const seedDay = useMutation({
