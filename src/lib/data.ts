@@ -498,3 +498,372 @@ export function useCompleteRevision() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["revisions"] }),
   });
 }
+/* ---------------- chapter status ---------------- */
+
+export function useSetChapterStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: TopicStatus }) => {
+      const { error } = await supabase.from("chapters").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ["syllabus"] });
+      const prev = qc.getQueryData<Syllabus>(["syllabus"]);
+      if (prev) {
+        qc.setQueryData<Syllabus>(["syllabus"], {
+          ...prev,
+          chapters: prev.chapters.map((c) => (c.id === id ? { ...c, status } : c)),
+        });
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["syllabus"], ctx.prev);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["syllabus"] }),
+  });
+}
+
+/* ---------------- syllabus templates / provisioning ---------------- */
+
+/** Creates a subject and, when a template exists, its chapters and topics. */
+export async function createSubjectFromTemplate(name: string, position: number) {
+  const user_id = await uid();
+  const tpl = templateFor(name);
+  const subjectName = tpl?.name ?? name;
+
+  const existing = await supabase.from("subjects").select("id").eq("name", subjectName).maybeSingle();
+  if (existing.data) return existing.data.id as string;
+
+  const { data: subject, error } = await supabase
+    .from("subjects")
+    .insert({ user_id, name: subjectName, position })
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  if (tpl) {
+    const { data: chapters, error: cErr } = await supabase
+      .from("chapters")
+      .insert(
+        tpl.chapters.map((c, i) => ({ user_id, subject_id: subject.id, name: c.name, position: i })),
+      )
+      .select("id, name, position");
+    if (cErr) throw cErr;
+
+    const topics = (chapters ?? []).flatMap((ch) => {
+      const source = tpl.chapters[ch.position];
+      return (source?.topics ?? []).map((t, i) => ({
+        user_id,
+        subject_id: subject.id,
+        chapter_id: ch.id,
+        name: t,
+        position: i,
+      }));
+    });
+    if (topics.length) {
+      const { error: tErr } = await supabase.from("topics").insert(topics);
+      if (tErr) throw tErr;
+    }
+  }
+  return subject.id as string;
+}
+
+export function useAddSubject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ name, position }: { name: string; position: number }) =>
+      createSubjectFromTemplate(name, position),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["syllabus"] });
+      qc.invalidateQueries({ queryKey: ["tracking"] });
+    },
+  });
+}
+
+/** Creates the default subjects + syllabus for the student's stream. */
+export function useProvisionStream() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (stream: string | null) => {
+      const names = subjectsForStream(stream);
+      let created = 0;
+      for (const [i, name] of names.entries()) {
+        const before = await supabase.from("subjects").select("id").eq("name", name).maybeSingle();
+        if (before.data) continue;
+        await createSubjectFromTemplate(name, i);
+        created++;
+      }
+      await ensureTrackingResources();
+      return created;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["syllabus"] });
+      qc.invalidateQueries({ queryKey: ["tracking"] });
+    },
+  });
+}
+
+/* ---------------- daily notes ---------------- */
+
+export function useDailyNote(date: string) {
+  return useQuery({
+    queryKey: ["note", date],
+    queryFn: async (): Promise<DailyNote | null> => {
+      const { data, error } = await supabase.from("daily_notes").select("*").eq("date", date).maybeSingle();
+      if (error) throw error;
+      return (data as DailyNote) ?? null;
+    },
+  });
+}
+
+export function useRecentNotes(limit = 14) {
+  return useQuery({
+    queryKey: ["notes", limit],
+    queryFn: async (): Promise<DailyNote[]> => {
+      const res = await supabase.from("daily_notes").select("*").order("date", { ascending: false }).limit(limit);
+      return unwrap<DailyNote[]>(res as never);
+    },
+  });
+}
+
+export function useNoteMutations() {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["note"] });
+    qc.invalidateQueries({ queryKey: ["notes"] });
+  };
+  const save = useMutation({
+    mutationFn: async ({ date, content }: { date: string; content: string }) => {
+      const user_id = await uid();
+      const { error } = await supabase
+        .from("daily_notes")
+        .upsert({ user_id, date, content }, { onConflict: "user_id,date" });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("daily_notes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+  return { save, remove };
+}
+
+/* ---------------- study log (topics studied) ---------------- */
+
+export function useStudyLogs(date?: string) {
+  return useQuery({
+    queryKey: ["study-logs", date ?? "all"],
+    queryFn: async (): Promise<StudyLog[]> => {
+      let q = supabase.from("study_logs").select("*").order("lecture_number");
+      if (date) q = q.eq("date", date);
+      const res = await q;
+      return unwrap<StudyLog[]>(res as never);
+    },
+  });
+}
+
+/** Schedules the full revision ladder (days 0,1,2,4,7,15,30) for a topic. */
+export async function scheduleRevisions(topicId: string, baseDate: string) {
+  const user_id = await uid();
+  const rows = REVISION_OFFSETS.map((offset, i) => ({
+    user_id,
+    topic_id: topicId,
+    revision_number: i + 1,
+    due_date: addDays(baseDate, offset),
+    status: "pending" as const,
+  }));
+  const { error } = await supabase
+    .from("revision_items")
+    .upsert(rows, { onConflict: "topic_id,revision_number", ignoreDuplicates: true });
+  if (error) throw error;
+}
+
+export function useStudyLogMutations(date: string) {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["study-logs"] });
+    qc.invalidateQueries({ queryKey: ["revisions"] });
+    qc.invalidateQueries({ queryKey: ["syllabus"] });
+  };
+
+  const add = useMutation({
+    mutationFn: async (v: {
+      lecture_number: number;
+      lecture_name?: string | null;
+      subject_id: string | null;
+      chapter_id: string | null;
+      topic_id: string | null;
+      topic_name: string;
+    }) => {
+      const user_id = await uid();
+      const { error } = await supabase.from("study_logs").insert({
+        user_id,
+        date,
+        lecture_number: v.lecture_number,
+        lecture_name: v.lecture_name ?? null,
+        subject_id: v.subject_id,
+        chapter_id: v.chapter_id,
+        topic_id: v.topic_id,
+        topic_name: v.topic_name,
+      });
+      if (error) throw error;
+      if (v.topic_id) await scheduleRevisions(v.topic_id, date);
+    },
+    onSuccess: invalidate,
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("study_logs").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  return { add, remove };
+}
+
+/* ---------------- 360R configuration ---------------- */
+
+export const DEFAULT_R360: Omit<R360Item, "id">[] = [
+  { kind: "lecture", label: "Lecture", block_count: 3, per_block: 1, unit: null, position: 0 },
+  { kind: "question", label: "Question Practice", block_count: 6, per_block: 10, unit: "questions", position: 1 },
+  { kind: "revision", label: "Revision (Today · 5 mins)", block_count: 1, per_block: 1, unit: null, position: 2 },
+  { kind: "revision", label: "Revision (Previous)", block_count: 1, per_block: 1, unit: null, position: 3 },
+];
+
+async function ensureR360Items(): Promise<R360Item[]> {
+  const user_id = await uid();
+  const res = await supabase.from("r360_items").select("*").order("position");
+  if (res.error) throw res.error;
+  if ((res.data ?? []).length) return res.data as R360Item[];
+  const { data, error } = await supabase
+    .from("r360_items")
+    .insert(DEFAULT_R360.map((d) => ({ user_id, ...d })))
+    .select("*");
+  if (error) throw error;
+  return (data ?? []) as R360Item[];
+}
+
+export function useR360Items() {
+  return useQuery({ queryKey: ["r360"], queryFn: ensureR360Items });
+}
+
+export function useR360Mutations() {
+  const qc = useQueryClient();
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["r360"] });
+    qc.invalidateQueries({ queryKey: ["daily"] });
+    qc.invalidateQueries({ queryKey: ["daily-all"] });
+  };
+
+  const add = useMutation({
+    mutationFn: async (v: Omit<R360Item, "id">) => {
+      const user_id = await uid();
+      const { error } = await supabase.from("r360_items").insert({ user_id, ...v });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const update = useMutation({
+    mutationFn: async ({ id, ...patch }: Partial<R360Item> & { id: string }) => {
+      const { error } = await supabase.from("r360_items").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("r360_items").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  return { add, update, remove };
+}
+
+/* ---------------- chapter-wise tracking ---------------- */
+
+export async function ensureTrackingResources(): Promise<TrackingResource[]> {
+  const user_id = await uid();
+  const res = await supabase.from("tracking_resources").select("*").order("position");
+  if (res.error) throw res.error;
+  if ((res.data ?? []).length) return res.data as TrackingResource[];
+  const { data, error } = await supabase
+    .from("tracking_resources")
+    .insert(DEFAULT_TRACKING_RESOURCES.map((name, position) => ({ user_id, name, position })))
+    .select("*");
+  if (error) throw error;
+  return (data ?? []) as TrackingResource[];
+}
+
+export function useTracking() {
+  return useQuery({
+    queryKey: ["tracking"],
+    queryFn: async () => {
+      const resources = await ensureTrackingResources();
+      const cells = await supabase.from("tracking_cells").select("*");
+      return { resources, cells: unwrap<TrackingCell[]>(cells as never) };
+    },
+  });
+}
+
+export function useTrackingMutations() {
+  const qc = useQueryClient();
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["tracking"] });
+
+  const setCell = useMutation({
+    mutationFn: async (v: { chapter_id: string; resource_id: string; status: TopicStatus }) => {
+      const user_id = await uid();
+      const { error } = await supabase
+        .from("tracking_cells")
+        .upsert({ user_id, ...v }, { onConflict: "chapter_id,resource_id" });
+      if (error) throw error;
+    },
+    onMutate: async (v) => {
+      await qc.cancelQueries({ queryKey: ["tracking"] });
+      const prev = qc.getQueryData<{ resources: TrackingResource[]; cells: TrackingCell[] }>(["tracking"]);
+      if (prev) {
+        const idx = prev.cells.findIndex((c) => c.chapter_id === v.chapter_id && c.resource_id === v.resource_id);
+        const cells =
+          idx >= 0
+            ? prev.cells.map((c, i) => (i === idx ? { ...c, status: v.status } : c))
+            : [...prev.cells, { id: `tmp-${v.chapter_id}-${v.resource_id}`, ...v }];
+        qc.setQueryData(["tracking"], { ...prev, cells });
+      }
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["tracking"], ctx.prev);
+    },
+    onSettled: invalidate,
+  });
+
+  const addResource = useMutation({
+    mutationFn: async ({ name, position }: { name: string; position: number }) => {
+      const user_id = await uid();
+      const { error } = await supabase.from("tracking_resources").insert({ user_id, name, position });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const removeResource = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("tracking_resources").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  return { setCell, addResource, removeResource };
+}
