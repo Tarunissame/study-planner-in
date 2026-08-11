@@ -177,7 +177,7 @@ function Strip() {
   const items = [
     "Built for JEE, NEET, Boards & beyond",
     "Track every subject, chapter & topic",
-    "Day 1 → 39 spaced revision, automatic",
+    "Day 1 → 30 spaced revision, automatic",
     "Free to start. No credit card.",
   ];
   return (
@@ -208,7 +208,7 @@ const FEATURES = [
   {
     icon: RefreshCw,
     title: "Automatic Spaced Revision",
-    desc: "Finish a topic and revisions appear at Day 1, 2, 3, 4, 7, 15 and 39. You never schedule them yourself.",
+    desc: "Finish a topic and revisions appear at Day 1, 2, 3, 5, 7, 15 and 30. You never schedule them yourself.",
   },
   {
     icon: CalendarDays,
@@ -302,7 +302,7 @@ function HowItWorks() {
     ["Set Up Your Profile", "Class, board, stream and target exam."],
     ["Build Your Syllabus", "Add subjects, chapters and topics your way."],
     ["Track Daily", "Tick off lectures, questions and revision."],
-    ["Get Auto Revisions", "The engine schedules Day 1 → 39 for you."],
+    ["Get Auto Revisions", "The engine schedules Day 1 → 30 for you."],
     ["Watch Progress Grow", "Charts, streaks and completion, always live."],
   ];
   return (
@@ -457,7 +457,7 @@ function Landing() {
         eyebrow="Revision engine"
         title="Revision that schedules itself"
         points={[
-          "Mark a topic complete and the engine creates seven revisions at Day 1, 2, 3, 4, 7, 15 and 39.",
+          "Mark a topic complete and the engine creates seven revisions at Day 1, 2, 3, 5, 7, 15 and 30.",
           "See what's due today, what's coming up and everything you've already revised.",
           "Filter by subject, chapter or topic when you want to drill into one area.",
           "A revision consistency score keeps you honest about the reviews you actually did.",
