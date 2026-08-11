@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { REVISION_OFFSETS, todayISO, addDays, type TopicStatus, type TaskType } from "@/lib/study";
+import {
+  DEFAULT_TRACKING_RESOURCES,
+  subjectsForStream,
+  templateFor,
+} from "@/lib/syllabus-templates";
 
 export type Profile = {
   user_id: string;
@@ -16,7 +21,14 @@ export type Profile = {
 };
 
 export type Subject = { id: string; name: string; position: number; archived: boolean };
-export type Chapter = { id: string; subject_id: string; name: string; position: number; archived: boolean };
+export type Chapter = {
+  id: string;
+  subject_id: string;
+  name: string;
+  position: number;
+  archived: boolean;
+  status: TopicStatus;
+};
 export type Topic = {
   id: string;
   subject_id: string;
@@ -53,6 +65,28 @@ export type TrackerScope = {
   chapter_id: string | null;
   topic_id: string | null;
 };
+export type DailyNote = { id: string; date: string; content: string };
+export type StudyLog = {
+  id: string;
+  date: string;
+  lecture_number: number;
+  lecture_name: string | null;
+  subject_id: string | null;
+  chapter_id: string | null;
+  topic_id: string | null;
+  topic_name: string;
+};
+export type R360Item = {
+  id: string;
+  kind: "lecture" | "question" | "revision" | "custom";
+  label: string;
+  block_count: number;
+  per_block: number;
+  unit: string | null;
+  position: number;
+};
+export type TrackingResource = { id: string; name: string; position: number };
+export type TrackingCell = { id: string; chapter_id: string; resource_id: string; status: TopicStatus };
 
 async function uid() {
   const { data } = await supabase.auth.getUser();
