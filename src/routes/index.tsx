@@ -422,7 +422,7 @@ function Footer() {
 
 function Landing() {
   return (
-    <main className="min-h-screen bg-background">
+    <main className="page-gradient min-h-screen bg-background">
       <Navbar />
       <Hero />
       <Strip />

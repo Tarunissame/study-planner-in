@@ -61,8 +61,11 @@ function AuthPage() {
         });
         if (error) throw error;
         if (!data.session) {
-          toast.success("Check your email to confirm your account, then log in.");
-          return;
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: parsed.data.email,
+            password: parsed.data.password,
+          });
+          if (signInError) throw signInError;
         }
         navigate({ to: "/onboarding", replace: true });
       } else {
