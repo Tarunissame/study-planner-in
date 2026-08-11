@@ -1,4 +1,5 @@
-export const REVISION_OFFSETS = [1, 2, 3, 5, 7, 15, 30] as const;
+/** StudyTracker spaced-revision ladder. Day 0 is the same-day 5-minute revision. */
+export const REVISION_OFFSETS = [0, 1, 2, 4, 7, 15, 30] as const;
 
 export type TopicStatus = "blank" | "in_progress" | "completed";
 export type TaskType = "lecture" | "question_block" | "revision" | "custom";
@@ -34,8 +35,40 @@ export function formatLongDate(iso: string) {
   });
 }
 
-/** Day offset (1, 2, 3, 5, 7, 15, 30) for a 1-based revision number. */
+/** Day offset (0, 1, 2, 4, 7, 15, 30) for a 1-based revision number. */
 export const revisionOffset = (n: number) => REVISION_OFFSETS[n - 1] ?? n;
+
+/** Human label for a revision number, e.g. "Revision 1 · Day 0 (5-min)". */
+export function revisionLabel(n: number) {
+  const offset = revisionOffset(n);
+  return offset === 0 ? "Day 0 · 5-min revision" : `Day ${offset}`;
+}
+
+export const ordinal = (n: number) => {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+};
+
+/** Monday-start week containing the given ISO date. */
+export function startOfWeek(iso: string) {
+  const d = new Date(iso + "T00:00:00");
+  const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day);
+  return toISODate(d);
+}
+
+export function weekDates(startISO: string) {
+  return Array.from({ length: 7 }, (_, i) => addDays(startISO, i));
+}
+
+export function formatShortDate(iso: string) {
+  return new Date(iso + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+export function formatWeekday(iso: string) {
+  return new Date(iso + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" });
+}
 
 export type Progress = { total: number; completed: number; inProgress: number; notStarted: number; pct: number };
 
