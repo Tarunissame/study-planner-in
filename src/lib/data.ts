@@ -882,3 +882,35 @@ export function useTrackingMutations() {
 
   return { setCell, addResource, removeResource };
 }
+
+/** Daily tasks for a date range (weekly 360R table). */
+export function useTasksInRange(from: string, to: string) {
+  return useQuery({
+    queryKey: ["daily-range", from, to],
+    queryFn: async (): Promise<DailyTask[]> => {
+      const res = await supabase
+        .from("daily_tasks")
+        .select("*")
+        .gte("date", from)
+        .lte("date", to)
+        .order("position");
+      return unwrap<DailyTask[]>(res as never);
+    },
+  });
+}
+
+/** Study logs for a date range. */
+export function useStudyLogsInRange(from: string, to: string) {
+  return useQuery({
+    queryKey: ["study-logs-range", from, to],
+    queryFn: async (): Promise<StudyLog[]> => {
+      const res = await supabase
+        .from("study_logs")
+        .select("*")
+        .gte("date", from)
+        .lte("date", to)
+        .order("lecture_number");
+      return unwrap<StudyLog[]>(res as never);
+    },
+  });
+}
