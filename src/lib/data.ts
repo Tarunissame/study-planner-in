@@ -368,7 +368,7 @@ export function useDailyMutations(date: string) {
   };
 
   const seedDay = useMutation({
-    mutationFn: async (profile: Profile) => {
+    mutationFn: async (items: R360Item[]) => {
       const user_id = await uid();
       type DailyInsert = {
         user_id: string;
@@ -377,21 +377,34 @@ export function useDailyMutations(date: string) {
         label: string;
         target_quantity: number;
         position: number;
+        block_index: number;
+        r360_item_id: string;
       };
       const rows: DailyInsert[] = [];
       let pos = 0;
-      for (let i = 0; i < profile.default_lecture_target; i++)
-        rows.push({ user_id, date, task_type: "lecture", label: `Lecture ${i + 1}`, target_quantity: 1, position: pos++ });
-      for (let i = 0; i < profile.default_question_blocks; i++)
-        rows.push({
-          user_id,
-          date,
-          task_type: "question_block",
-          label: `Questions ×${profile.default_questions_per_block}`,
-          target_quantity: profile.default_questions_per_block,
-          position: pos++,
-        });
-      rows.push({ user_id, date, task_type: "revision", label: "Revision session", target_quantity: 1, position: pos++ });
+      for (const item of items) {
+        const type: TaskType =
+          item.kind === "lecture"
+            ? "lecture"
+            : item.kind === "question"
+              ? "question_block"
+              : item.kind === "revision"
+                ? "revision"
+                : "custom";
+        for (let i = 0; i < Math.max(1, item.block_count); i++) {
+          rows.push({
+            user_id,
+            date,
+            task_type: type,
+            label: item.block_count > 1 ? `${item.label} ${i + 1}` : item.label,
+            target_quantity: Math.max(1, item.per_block),
+            position: pos++,
+            block_index: i,
+            r360_item_id: item.id,
+          });
+        }
+      }
+      if (!rows.length) return;
       const { error } = await supabase.from("daily_tasks").insert(rows);
       if (error) throw error;
     },
