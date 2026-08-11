@@ -189,7 +189,7 @@ export function RevisionMock() {
         ))}
       </ul>
       <div className="mt-4 flex gap-1.5">
-        {[1, 2, 3, 4, 7, 15, 39].map((d) => (
+        {[1, 2, 3, 5, 7, 15, 30].map((d) => (
           <span
             key={d}
             className="flex-1 rounded-md border border-border bg-surface-2/60 py-1 text-center text-[11px] text-muted-foreground"

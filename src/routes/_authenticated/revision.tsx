@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/revision")({
   head: () => ({
     meta: [
       { title: "Spaced Revision — StudyTracker" },
-      { name: "description", content: "Automatic Day 1, 2, 3, 4, 7, 15 and 39 revision schedule for every completed topic." },
+      { name: "description", content: "Automatic Day 1, 2, 3, 5, 7, 15 and 30 revision schedule for every completed topic." },
       { property: "og:title", content: "Spaced Revision — StudyTracker" },
       { property: "og:description", content: "Finish a topic and the whole revision ladder is scheduled for you." },
     ],

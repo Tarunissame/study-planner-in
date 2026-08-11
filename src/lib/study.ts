@@ -1,4 +1,4 @@
-export const REVISION_OFFSETS = [1, 2, 3, 4, 7, 15, 39] as const;
+export const REVISION_OFFSETS = [1, 2, 3, 5, 7, 15, 30] as const;
 
 export type TopicStatus = "blank" | "in_progress" | "completed";
 export type TaskType = "lecture" | "question_block" | "revision" | "custom";
@@ -34,7 +34,7 @@ export function formatLongDate(iso: string) {
   });
 }
 
-/** Day offset (1, 2, 3, 4, 7, 15, 39) for a 1-based revision number. */
+/** Day offset (1, 2, 3, 5, 7, 15, 30) for a 1-based revision number. */
 export const revisionOffset = (n: number) => REVISION_OFFSETS[n - 1] ?? n;
 
 export type Progress = { total: number; completed: number; inProgress: number; notStarted: number; pct: number };
