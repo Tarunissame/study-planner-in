@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { REVISION_OFFSETS, todayISO, addDays, type TopicStatus, type TaskType } from "@/lib/study";
+import { REVISION_OFFSETS, addDays, type TopicStatus, type TaskType } from "@/lib/study";
 import {
   DEFAULT_TRACKING_RESOURCES,
   subjectsForStream,
@@ -87,7 +87,7 @@ export type R360Item = {
   unit: string | null;
   position: number;
 };
-export type TrackingResource = { id: string; name: string; position: number };
+export type TrackingResource = { id: string; name: string; position: number; starred: boolean };
 export type TrackingCell = { id: string; chapter_id: string; resource_id: string; status: TopicStatus };
 
 async function uid() {
@@ -221,34 +221,14 @@ export function useSyllabusMutations() {
   return { addSubject, addChapter, addTopic, rename, remove, reorder };
 }
 
-/** Marks a topic status and keeps its spaced-revision schedule in sync. */
+/**
+ * Marks a topic status. NOTE: syllabus completion deliberately does NOT create
+ * revisions — only 360R "topics studied" entries generate revision sequences.
+ */
 export async function applyTopicStatus(topicId: string, status: TopicStatus) {
-  const user_id = await uid();
   const completed_at = status === "completed" ? new Date().toISOString() : null;
   const { error } = await supabase.from("topics").update({ status, completed_at }).eq("id", topicId);
   if (error) throw error;
-
-  if (status === "completed") {
-    const base = todayISO();
-    const rows = REVISION_OFFSETS.map((offset, i) => ({
-      user_id,
-      topic_id: topicId,
-      revision_number: i + 1,
-      due_date: addDays(base, offset),
-      status: "pending" as const,
-    }));
-    const { error: rErr } = await supabase
-      .from("revision_items")
-      .upsert(rows, { onConflict: "topic_id,revision_number", ignoreDuplicates: true });
-    if (rErr) throw rErr;
-  } else {
-    const { error: dErr } = await supabase
-      .from("revision_items")
-      .delete()
-      .eq("topic_id", topicId)
-      .eq("status", "pending");
-    if (dErr) throw dErr;
-  }
 }
 
 export function useSetTopicStatus() {
