@@ -502,6 +502,14 @@ export function useSetChapterStatus() {
     mutationFn: async ({ id, status }: { id: string; status: TopicStatus }) => {
       const { error } = await supabase.from("chapters").update({ status }).eq("id", id);
       if (error) throw error;
+      // Completed chapter => all its topics complete. Other statuses leave topics untouched.
+      if (status === "completed") {
+        const { error: tErr } = await supabase
+          .from("topics")
+          .update({ status: "completed", completed_at: new Date().toISOString() })
+          .eq("chapter_id", id);
+        if (tErr) throw tErr;
+      }
     },
     onMutate: async ({ id, status }) => {
       await qc.cancelQueries({ queryKey: ["syllabus"] });
@@ -510,6 +518,10 @@ export function useSetChapterStatus() {
         qc.setQueryData<Syllabus>(["syllabus"], {
           ...prev,
           chapters: prev.chapters.map((c) => (c.id === id ? { ...c, status } : c)),
+          topics:
+            status === "completed"
+              ? prev.topics.map((t) => (t.chapter_id === id ? { ...t, status: "completed" as TopicStatus } : t))
+              : prev.topics,
         });
       }
       return { prev };
@@ -853,6 +865,24 @@ export function useTrackingMutations() {
     onSuccess: invalidate,
   });
 
+  const updateResource = useMutation({
+    mutationFn: async ({ id, ...patch }: { id: string; name?: string; starred?: boolean; position?: number }) => {
+      const { error } = await supabase.from("tracking_resources").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const reorderResources = useMutation({
+    mutationFn: async (items: { id: string; position: number }[]) => {
+      for (const it of items) {
+        const { error } = await supabase.from("tracking_resources").update({ position: it.position }).eq("id", it.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: invalidate,
+  });
+
   const removeResource = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("tracking_resources").delete().eq("id", id);
@@ -861,7 +891,7 @@ export function useTrackingMutations() {
     onSuccess: invalidate,
   });
 
-  return { setCell, addResource, removeResource };
+  return { setCell, addResource, updateResource, reorderResources, removeResource };
 }
 
 /** Daily tasks for a date range (weekly 360R table). */
