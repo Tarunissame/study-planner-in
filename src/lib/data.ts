@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { REVISION_OFFSETS, todayISO, addDays, type TopicStatus, type TaskType } from "@/lib/study";
+import { REVISION_OFFSETS, addDays, type TopicStatus, type TaskType } from "@/lib/study";
 import {
   DEFAULT_TRACKING_RESOURCES,
   subjectsForStream,
@@ -87,7 +87,7 @@ export type R360Item = {
   unit: string | null;
   position: number;
 };
-export type TrackingResource = { id: string; name: string; position: number };
+export type TrackingResource = { id: string; name: string; position: number; starred: boolean };
 export type TrackingCell = { id: string; chapter_id: string; resource_id: string; status: TopicStatus };
 
 async function uid() {
@@ -221,34 +221,14 @@ export function useSyllabusMutations() {
   return { addSubject, addChapter, addTopic, rename, remove, reorder };
 }
 
-/** Marks a topic status and keeps its spaced-revision schedule in sync. */
+/**
+ * Marks a topic status. NOTE: syllabus completion deliberately does NOT create
+ * revisions — only 360R "topics studied" entries generate revision sequences.
+ */
 export async function applyTopicStatus(topicId: string, status: TopicStatus) {
-  const user_id = await uid();
   const completed_at = status === "completed" ? new Date().toISOString() : null;
   const { error } = await supabase.from("topics").update({ status, completed_at }).eq("id", topicId);
   if (error) throw error;
-
-  if (status === "completed") {
-    const base = todayISO();
-    const rows = REVISION_OFFSETS.map((offset, i) => ({
-      user_id,
-      topic_id: topicId,
-      revision_number: i + 1,
-      due_date: addDays(base, offset),
-      status: "pending" as const,
-    }));
-    const { error: rErr } = await supabase
-      .from("revision_items")
-      .upsert(rows, { onConflict: "topic_id,revision_number", ignoreDuplicates: true });
-    if (rErr) throw rErr;
-  } else {
-    const { error: dErr } = await supabase
-      .from("revision_items")
-      .delete()
-      .eq("topic_id", topicId)
-      .eq("status", "pending");
-    if (dErr) throw dErr;
-  }
 }
 
 export function useSetTopicStatus() {
@@ -522,6 +502,14 @@ export function useSetChapterStatus() {
     mutationFn: async ({ id, status }: { id: string; status: TopicStatus }) => {
       const { error } = await supabase.from("chapters").update({ status }).eq("id", id);
       if (error) throw error;
+      // Completed chapter => all its topics complete. Other statuses leave topics untouched.
+      if (status === "completed") {
+        const { error: tErr } = await supabase
+          .from("topics")
+          .update({ status: "completed", completed_at: new Date().toISOString() })
+          .eq("chapter_id", id);
+        if (tErr) throw tErr;
+      }
     },
     onMutate: async ({ id, status }) => {
       await qc.cancelQueries({ queryKey: ["syllabus"] });
@@ -530,6 +518,10 @@ export function useSetChapterStatus() {
         qc.setQueryData<Syllabus>(["syllabus"], {
           ...prev,
           chapters: prev.chapters.map((c) => (c.id === id ? { ...c, status } : c)),
+          topics:
+            status === "completed"
+              ? prev.topics.map((t) => (t.chapter_id === id ? { ...t, status: "completed" as TopicStatus } : t))
+              : prev.topics,
         });
       }
       return { prev };
@@ -873,6 +865,24 @@ export function useTrackingMutations() {
     onSuccess: invalidate,
   });
 
+  const updateResource = useMutation({
+    mutationFn: async ({ id, ...patch }: { id: string; name?: string; starred?: boolean; position?: number }) => {
+      const { error } = await supabase.from("tracking_resources").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const reorderResources = useMutation({
+    mutationFn: async (items: { id: string; position: number }[]) => {
+      for (const it of items) {
+        const { error } = await supabase.from("tracking_resources").update({ position: it.position }).eq("id", it.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: invalidate,
+  });
+
   const removeResource = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("tracking_resources").delete().eq("id", id);
@@ -881,7 +891,7 @@ export function useTrackingMutations() {
     onSuccess: invalidate,
   });
 
-  return { setCell, addResource, removeResource };
+  return { setCell, addResource, updateResource, reorderResources, removeResource };
 }
 
 /** Daily tasks for a date range (weekly 360R table). */

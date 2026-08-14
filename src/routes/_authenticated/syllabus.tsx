@@ -5,7 +5,6 @@ import { z } from "zod";
 import {
   ChevronDown,
   ChevronRight,
-  Columns3,
   BookOpen,
   Pencil,
   Plus,
@@ -24,20 +23,16 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   useAddSubject,
   useSetChapterStatus,
   useSetTopicStatus,
   useSyllabus,
   useSyllabusMutations,
-  useTrackerColumns,
-  useTrackerColumnMutations,
 } from "@/lib/data";
 import { buildTree, type ChapterNode, type SubjectNode } from "@/lib/progress";
 import { nextStatus, statusLabel } from "@/lib/study";
@@ -195,162 +190,6 @@ function AddSubjectDialog({ position }: { position: number }) {
   );
 }
 
-/* ---------------- tracking columns ---------------- */
-
-function TrackerColumnsDialog() {
-  const { data: syllabus } = useSyllabus();
-  const { data: tracker } = useTrackerColumns();
-  const { create, remove } = useTrackerColumnMutations();
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [type, setType] = useState("checkbox");
-  const [target, setTarget] = useState("");
-  const [unit, setUnit] = useState("");
-  const [scopeKind, setScopeKind] = useState<"subject" | "chapter" | "topic">("chapter");
-  const [scopeId, setScopeId] = useState("");
-
-  const options =
-    scopeKind === "subject"
-      ? (syllabus?.subjects ?? []).map((s) => ({ id: s.id, name: s.name }))
-      : scopeKind === "chapter"
-        ? (syllabus?.chapters ?? []).map((c) => ({ id: c.id, name: c.name }))
-        : (syllabus?.topics ?? []).map((t) => ({ id: t.id, name: t.name }));
-
-  async function submit() {
-    if (!name.trim() || !scopeId) {
-      toast.error("Add a column name and pick what it applies to");
-      return;
-    }
-    await create.mutateAsync({
-      name: name.trim().slice(0, 60),
-      type,
-      target: target ? Number(target) : null,
-      unit: unit.trim() || null,
-      scopes: [
-        {
-          subject_id: scopeKind === "subject" ? scopeId : null,
-          chapter_id: scopeKind === "chapter" ? scopeId : null,
-          topic_id: scopeKind === "topic" ? scopeId : null,
-        },
-      ],
-    });
-    toast.success("Tracking column added");
-    setName("");
-    setTarget("");
-    setUnit("");
-    setScopeId("");
-    setOpen(false);
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Columns3 className="size-4" /> Custom columns
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Custom tracking columns</DialogTitle>
-          <DialogDescription>
-            Track extras like Formula Sheet, Teacher Assignment or Custom Revision against a subject, one chapter or a single topic.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Formula Sheet" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Type</Label>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="checkbox">Checkbox</SelectItem>
-                  <SelectItem value="count">Count</SelectItem>
-                  <SelectItem value="percent">Percent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Target (optional)</Label>
-              <Input value={target} onChange={(e) => setTarget(e.target.value)} inputMode="numeric" placeholder="30" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Unit (optional)</Label>
-              <Input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="questions" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Applies to</Label>
-              <Select
-                value={scopeKind}
-                onValueChange={(v) => {
-                  setScopeKind(v as typeof scopeKind);
-                  setScopeId("");
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="subject">Whole subject</SelectItem>
-                  <SelectItem value="chapter">A chapter</SelectItem>
-                  <SelectItem value="topic">A topic</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Scope</Label>
-              <Select value={scopeId} onValueChange={setScopeId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {options.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>
-                      {o.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {(tracker?.columns.length ?? 0) > 0 && (
-            <div className="space-y-2 border-t border-border pt-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Existing columns</p>
-              {tracker?.columns.map((c) => (
-                <div key={c.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
-                  <span>
-                    {c.name}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {c.type}
-                      {c.target ? ` · target ${c.target}${c.unit ? ` ${c.unit}` : ""}` : ""}
-                    </span>
-                  </span>
-                  <Button size="icon" variant="ghost" className="size-7 text-destructive" onClick={() => remove.mutate(c.id)}>
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button onClick={submit} disabled={create.isPending}>
-            Add column
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 /* ---------------- rows ---------------- */
 
 function TopicRow({
@@ -442,7 +281,7 @@ function ChapterCard({
   columnsFor: (ids: { subjectId: string; chapterId?: string | null; topicId?: string }) => string[];
   onMove: (dir: -1 | 1) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const m = useSyllabusMutations();
   const setTopicStatus = useSetTopicStatus();
   const setChapterStatus = useSetChapterStatus();
@@ -516,18 +355,7 @@ function ChapterCard({
 function SubjectPanel({ node }: { node: SubjectNode }) {
   const m = useSyllabusMutations();
   const setTopicStatus = useSetTopicStatus();
-  const { data: tracker } = useTrackerColumns();
-
-  const columnsFor = (ids: { subjectId: string; chapterId?: string | null; topicId?: string }) =>
-    (tracker?.scopes ?? [])
-      .filter(
-        (s) =>
-          (s.subject_id && s.subject_id === ids.subjectId) ||
-          (s.chapter_id && s.chapter_id === ids.chapterId) ||
-          (s.topic_id && s.topic_id === ids.topicId),
-      )
-      .map((s) => tracker?.columns.find((c) => c.id === s.tracker_column_id)?.name)
-      .filter((n): n is string => !!n);
+  const columnsFor = (_ids: { subjectId: string; chapterId?: string | null; topicId?: string }): string[] => [];
 
   const rename = (table: "subjects" | "topics", id: string, current: string) => {
     const name = window.prompt("New name", current);
@@ -644,7 +472,6 @@ function SyllabusPage() {
       <PageHeader
         title="Syllabus"
         subtitle="Pick a subject, then work through chapters, topics and free topics. Everything is editable."
-        action={<TrackerColumnsDialog />}
       />
 
       {isLoading ? (
