@@ -21,6 +21,7 @@ import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedRevisionRouteImport } from './routes/_authenticated/revision'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSyllabusRouteImport } from './routes/_authenticated/syllabus'
+import { Route as AuthenticatedTrackingRouteImport } from './routes/_authenticated/tracking'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -81,6 +82,11 @@ const AuthenticatedSyllabusRoute = AuthenticatedSyllabusRouteImport.update({
   path: '/syllabus',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTrackingRoute = AuthenticatedTrackingRouteImport.update({
+  id: '/tracking',
+  path: '/tracking',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/revision': typeof AuthenticatedRevisionRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/syllabus': typeof AuthenticatedSyllabusRoute
+  '/tracking': typeof AuthenticatedTrackingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/revision': typeof AuthenticatedRevisionRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/syllabus': typeof AuthenticatedSyllabusRoute
+  '/tracking': typeof AuthenticatedTrackingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/_authenticated/revision': typeof AuthenticatedRevisionRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/syllabus': typeof AuthenticatedSyllabusRoute
+  '/_authenticated/tracking': typeof AuthenticatedTrackingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/revision'
     | '/settings'
     | '/syllabus'
+    | '/tracking'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/revision'
     | '/settings'
     | '/syllabus'
+    | '/tracking'
   id:
     | '__root__'
     | '/'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/_authenticated/revision'
     | '/_authenticated/settings'
     | '/_authenticated/syllabus'
+    | '/_authenticated/tracking'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -258,6 +270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSyllabusRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/tracking': {
+      id: '/_authenticated/tracking'
+      path: '/tracking'
+      fullPath: '/tracking'
+      preLoaderRoute: typeof AuthenticatedTrackingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -271,6 +290,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRevisionRoute: typeof AuthenticatedRevisionRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSyllabusRoute: typeof AuthenticatedSyllabusRoute
+  AuthenticatedTrackingRoute: typeof AuthenticatedTrackingRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -283,6 +303,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRevisionRoute: AuthenticatedRevisionRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSyllabusRoute: AuthenticatedSyllabusRoute,
+  AuthenticatedTrackingRoute: AuthenticatedTrackingRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
