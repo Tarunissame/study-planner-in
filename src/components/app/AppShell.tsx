@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Settings,
   Sparkles,
+  Table2,
   X,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 export const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/syllabus", label: "Syllabus", icon: BookOpen },
+  { to: "/tracking", label: "Tracking", icon: Table2 },
   { to: "/daily", label: "Daily 360R", icon: ListChecks },
   { to: "/revision", label: "Revision", icon: RefreshCw },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },

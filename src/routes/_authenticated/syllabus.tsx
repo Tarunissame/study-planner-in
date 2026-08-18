@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/app/AppShell";
+import { SubjectPills } from "@/components/app/SubjectPills";
 import { StatusBox } from "@/components/StatusBox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -457,6 +458,7 @@ function SubjectPanel({ node }: { node: SubjectNode }) {
 function SyllabusPage() {
   const { subject } = Route.useSearch();
   const { data: syllabus, isLoading } = useSyllabus();
+  const m = useSyllabusMutations();
   const tree = useMemo(() => (syllabus ? buildTree(syllabus) : []), [syllabus]);
   const [active, setActive] = useState<string | null>(subject ?? null);
 
@@ -482,24 +484,15 @@ function SyllabusPage() {
         </div>
       ) : (
         <div className="space-y-5">
-          <div className="flex flex-wrap items-center gap-2">
-            {tree.map((n) => (
-              <button
-                key={n.subject.id}
-                onClick={() => setActive(n.subject.id)}
-                className={cn(
-                  "rounded-full border px-4 py-1.5 text-sm transition-colors",
-                  n.subject.id === current?.subject.id
-                    ? "border-primary/60 bg-gradient-warm text-primary-foreground"
-                    : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
-                )}
-              >
-                {n.subject.name}
-                <span className="ml-2 text-[11px] opacity-80">{n.progress.pct}%</span>
-              </button>
-            ))}
-            <AddSubjectDialog position={tree.length} />
-          </div>
+          <SubjectPills
+            subjects={tree.map((n) => ({ id: n.subject.id, name: n.subject.name, badge: `${n.progress.pct}%` }))}
+            activeId={current?.subject.id}
+            onSelect={setActive}
+            onReorder={(ids) =>
+              m.reorder.mutate({ table: "subjects", items: ids.map((id, position) => ({ id, position })) })
+            }
+            trailing={<AddSubjectDialog position={tree.length} />}
+          />
 
           {current ? (
             <AnimatePresence mode="wait">

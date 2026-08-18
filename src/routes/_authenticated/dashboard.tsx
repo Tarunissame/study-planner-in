@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { BookOpen, Flame, RefreshCw, Target } from "lucide-react";
 import { EmptyState, PageHeader } from "@/components/app/AppShell";
+import { DailyNotes } from "@/components/app/DailyNotes";
 import { LegendRow, ProgressDonut } from "@/components/app/ProgressDonut";
 import { Button } from "@/components/ui/button";
 import { useAllDailyTasks, useDailyTasks, useProfile, useRevisions, useSyllabus } from "@/lib/data";
@@ -99,6 +100,10 @@ function Dashboard() {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <DailyNotes />
       </div>
 
       <h2 className="mb-4 mt-8 font-display text-lg font-semibold">Subjects</h2>
