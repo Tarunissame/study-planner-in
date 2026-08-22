@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      calendar_events: {
+        Row: {
+          category: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          time: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          date: string
+          description?: string
+          id?: string
+          time?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          time?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chapters: {
         Row: {
           archived: boolean
@@ -144,6 +177,95 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      exams: {
+        Row: {
+          created_at: string
+          exam_date: string
+          id: string
+          is_primary: boolean
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exam_date: string
+          id?: string
+          is_primary?: boolean
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exam_date?: string
+          id?: string
+          is_primary?: boolean
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      habit_completions: {
+        Row: {
+          created_at: string
+          date: string
+          habit_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          habit_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          habit_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_completions_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habits: {
+        Row: {
+          archived: boolean
+          created_at: string
+          id: string
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -331,6 +453,67 @@ export type Database = {
           },
         ]
       }
+      study_sessions: {
+        Row: {
+          chapter_id: string | null
+          created_at: string
+          date: string
+          duration_seconds: number
+          id: string
+          kind: string
+          label: string | null
+          subject_id: string | null
+          topic_id: string | null
+          user_id: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          created_at?: string
+          date?: string
+          duration_seconds?: number
+          id?: string
+          kind?: string
+          label?: string | null
+          subject_id?: string | null
+          topic_id?: string | null
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string | null
+          created_at?: string
+          date?: string
+          duration_seconds?: number
+          id?: string
+          kind?: string
+          label?: string | null
+          subject_id?: string | null
+          topic_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_sessions_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_sessions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_sessions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           archived: boolean
@@ -358,6 +541,186 @@ export type Database = {
           name?: string
           position?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      test_subject_scores: {
+        Row: {
+          id: string
+          marks_obtained: number
+          subject_id: string | null
+          subject_name: string
+          test_id: string
+          total_marks: number
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          marks_obtained?: number
+          subject_id?: string | null
+          subject_name: string
+          test_id: string
+          total_marks?: number
+          user_id: string
+        }
+        Update: {
+          id?: string
+          marks_obtained?: number
+          subject_id?: string | null
+          subject_name?: string
+          test_id?: string
+          total_marks?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_subject_scores_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_subject_scores_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_weak_chapters: {
+        Row: {
+          chapter_id: string | null
+          id: string
+          name: string
+          test_id: string
+          user_id: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          id?: string
+          name: string
+          test_id: string
+          user_id: string
+        }
+        Update: {
+          chapter_id?: string | null
+          id?: string
+          name?: string
+          test_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_weak_chapters_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_weak_chapters_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_weak_topics: {
+        Row: {
+          id: string
+          name: string
+          test_id: string
+          topic_id: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          test_id: string
+          topic_id?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          test_id?: string
+          topic_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_weak_topics_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_weak_topics_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tests: {
+        Row: {
+          created_at: string
+          date: string
+          duration_minutes: number | null
+          exam_type: string | null
+          id: string
+          marks_obtained: number | null
+          mistakes: string[]
+          name: string
+          needs_improvement: string
+          notes: string
+          percentile: number | null
+          rank: number | null
+          total_marks: number | null
+          updated_at: string
+          user_id: string
+          went_well: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          duration_minutes?: number | null
+          exam_type?: string | null
+          id?: string
+          marks_obtained?: number | null
+          mistakes?: string[]
+          name: string
+          needs_improvement?: string
+          notes?: string
+          percentile?: number | null
+          rank?: number | null
+          total_marks?: number | null
+          updated_at?: string
+          user_id: string
+          went_well?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          duration_minutes?: number | null
+          exam_type?: string | null
+          id?: string
+          marks_obtained?: number | null
+          mistakes?: string[]
+          name?: string
+          needs_improvement?: string
+          notes?: string
+          percentile?: number | null
+          rank?: number | null
+          total_marks?: number | null
+          updated_at?: string
+          user_id?: string
+          went_well?: string
         }
         Relationships: []
       }
