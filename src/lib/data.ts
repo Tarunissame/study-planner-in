@@ -90,13 +90,13 @@ export type R360Item = {
 export type TrackingResource = { id: string; name: string; position: number; starred: boolean };
 export type TrackingCell = { id: string; chapter_id: string; resource_id: string; status: TopicStatus };
 
-async function uid() {
+export async function uid() {
   const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error("Not signed in");
   return data.user.id;
 }
 
-function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
+export function unwrap<T>({ data, error }: { data: T | null; error: unknown }): T {
   if (error) throw error;
   return (data ?? []) as T;
 }
