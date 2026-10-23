@@ -103,7 +103,7 @@ export function ChapterStatusPopup() {
             <div key={c.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
               <span className="min-w-0 flex-1 truncate text-sm">{c.name}</span>
               <Select value={statuses[c.id] ?? c.status} onValueChange={(v) => setStatuses((p) => ({ ...p, [c.id]: v as TopicStatus }))}>
-                <SelectTrigger size="sm" className="w-36 shrink-0">
+                <SelectTrigger className="w-36 shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

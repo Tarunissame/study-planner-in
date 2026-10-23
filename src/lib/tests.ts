@@ -87,7 +87,7 @@ export function useSaveTest() {
         notes: v.notes,
         mistakes: v.mistakes,
       };
-      let testId = v.id;
+      let testId: string = v.id ?? "";
       if (v.id) {
         const { error } = await supabase.from("tests").update(row).eq("id", v.id);
         if (error) throw error;
